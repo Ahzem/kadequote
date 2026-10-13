@@ -18,5 +18,5 @@ describe('Live Ollama Integration Test (gemma3:1b)', () => {
     const descriptions = result.items.map((i) => i.description.toLowerCase()).join(' ');
     expect(descriptions).toMatch(/switch|socket/);
     console.log('Parsed result from Gemma 3 1B:', JSON.stringify(result, null, 2));
-  }, 35000);
+  }, 60000);
 });
