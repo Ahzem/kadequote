@@ -5,7 +5,7 @@ import { parseQuotationWithOllama } from '@/lib/ai/ollama';
 
 export async function POST(req: NextRequest) {
   try {
-    let body: any;
+    let body: unknown;
     try {
       body = await req.json();
     } catch {
@@ -32,9 +32,9 @@ export async function POST(req: NextRequest) {
       success: true,
       quotation,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in parse-quotation route handler:', error);
-    const message = error?.message || 'An unexpected error occurred while parsing the quotation.';
+    const message = error instanceof Error ? error.message : 'An unexpected error occurred while parsing the quotation.';
     return NextResponse.json(
       {
         success: false,

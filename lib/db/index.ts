@@ -19,7 +19,7 @@ interface KadeQuoteDB extends DBSchema {
   };
   settings: {
     key: string;
-    value: QuotationNumberingState | any;
+    value: QuotationNumberingState | unknown;
   };
 }
 
@@ -96,7 +96,8 @@ export async function deleteQuotation(id: string): Promise<void> {
 export async function getNextQuotationNumber(): Promise<string> {
   const db = await getDB();
   const currentYear = new Date().getFullYear();
-  const state: QuotationNumberingState = (await db.get('settings', 'quotation_sequence')) || {
+  const existingState = (await db.get('settings', 'quotation_sequence')) as QuotationNumberingState | undefined;
+  const state: QuotationNumberingState = existingState || {
     prefix: 'KQ',
     year: currentYear,
     lastSequence: 0,
@@ -209,17 +210,17 @@ export async function importAllData(
 
     for (const q of validated.quotations) {
       if (q && q.id && q.quotationNumber) {
-        await quotStore.put(q);
+        await quotStore.put(q as unknown as Quotation);
         importedCount++;
       }
     }
 
     if (validated.businessProfile) {
-      await tx.objectStore('businessProfile').put(validated.businessProfile, 'current');
+      await tx.objectStore('businessProfile').put(validated.businessProfile as unknown as BusinessProfile, 'current');
     }
 
     if (validated.numberingState) {
-      await tx.objectStore('settings').put(validated.numberingState, 'quotation_sequence');
+      await tx.objectStore('settings').put(validated.numberingState as unknown as QuotationNumberingState, 'quotation_sequence');
     }
 
     await tx.done;
@@ -229,11 +230,12 @@ export async function importAllData(
       quotationsCount: importedCount,
       message: `Successfully imported ${importedCount} quotation(s) and profile settings.`,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Invalid backup file structure or corrupted data.';
     return {
       success: false,
       quotationsCount: 0,
-      message: err?.message || 'Invalid backup file structure or corrupted data.',
+      message,
     };
   }
 }

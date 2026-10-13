@@ -92,11 +92,11 @@ describe('Validation Schemas', () => {
 
     it('extracts JSON cleanly from markdown code fences or conversational text', () => {
       const markdownWrapped = 'Here is your quotation:\n```json\n{"jobTitle": "Ceiling Fan", "items": []}\n```\nHope this helps!';
-      const extracted = extractAndParseJSON(markdownWrapped);
+      const extracted = extractAndParseJSON(markdownWrapped) as { jobTitle: string };
       expect(extracted.jobTitle).toBe('Ceiling Fan');
 
       const plainJson = '{"jobTitle": "Direct Object", "items": []}';
-      expect(extractAndParseJSON(plainJson).jobTitle).toBe('Direct Object');
+      expect((extractAndParseJSON(plainJson) as { jobTitle: string }).jobTitle).toBe('Direct Object');
     });
   });
 

@@ -64,6 +64,7 @@ export function QuotationPreviewModal({
             <div className="flex flex-col sm:flex-row justify-between items-start gap-4 border-b border-slate-100 pb-6">
               <div className="space-y-1">
                 {business.logoBase64 && (
+                  /* eslint-disable-next-line @next/next/no-img-element */
                   <img
                     src={business.logoBase64}
                     alt={business.name}

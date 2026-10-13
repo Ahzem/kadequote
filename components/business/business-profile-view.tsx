@@ -8,8 +8,6 @@ import {
   Trash2,
   Upload,
   Layers,
-  CheckCircle2,
-  Image as ImageIcon,
 } from 'lucide-react';
 import { BusinessProfile, PriceListItem } from '@/types/business';
 import { ItemCategory } from '@/types/quotation';
@@ -104,8 +102,8 @@ export function BusinessProfileView({
       await saveBusinessProfile(profile);
       onProfileUpdated(profile);
       success('Business Profile Saved', 'Your details and price list have been updated.');
-    } catch (err: any) {
-      error('Save Failed', err.message || 'Could not save profile.');
+    } catch (err: unknown) {
+      error('Save Failed', err instanceof Error ? err.message : 'Could not save profile.');
     } finally {
       setIsSaving(false);
     }
@@ -288,6 +286,7 @@ export function BusinessProfileView({
             {profile.logoBase64 ? (
               <div className="space-y-3">
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={profile.logoBase64}
                     alt="Logo Preview"

@@ -43,6 +43,8 @@ import { useToast } from '@/components/ui/toast';
 import { QuotationPreviewModal } from './quotation-preview-modal';
 import { downloadQuotationPDF } from '@/lib/pdf/generate-quotation-pdf';
 
+import { AIParsedItem } from '@/types/ai';
+
 interface QuotationWizardProps {
   initialQuotation?: Quotation | null;
   businessProfile: BusinessProfile;
@@ -82,93 +84,87 @@ export function QuotationWizard({
   // Step state (1: Customer, 2: Describe/AI, 3: Review Items, 4: Totals, 5: Export)
   const [currentStep, setCurrentStep] = useState<number>(initialQuotation ? 3 : 1);
 
-  // Form states
-  const [quotationId, setQuotationId] = useState<string>('');
-  const [quotationNumber, setQuotationNumber] = useState<string>('');
-  const [status, setStatus] = useState<'draft' | 'finalized'>('draft');
-  const [issueDate, setIssueDate] = useState<string>('');
-  const [validUntilDate, setValidUntilDate] = useState<string>('');
-  const [jobTitle, setJobTitle] = useState<string>('');
+  // Form states initialized lazily
+  const [quotationId] = useState<string>(() => {
+    if (initialQuotation?.id) return initialQuotation.id;
+    return typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `q_${Date.now()}`;
+  });
+
+  const [quotationNumber, setQuotationNumber] = useState<string>(() => {
+    if (initialQuotation?.quotationNumber) return initialQuotation.quotationNumber;
+    return '';
+  });
+
+  const [status, setStatus] = useState<'draft' | 'finalized'>(() => {
+    return initialQuotation?.status || 'draft';
+  });
+
+  const [issueDate, setIssueDate] = useState<string>(() => {
+    if (initialQuotation?.issueDate) return initialQuotation.issueDate;
+    return new Date().toISOString().slice(0, 10);
+  });
+
+  const [validUntilDate, setValidUntilDate] = useState<string>(() => {
+    if (initialQuotation?.validUntilDate) return initialQuotation.validUntilDate;
+    const today = new Date();
+    const days = businessProfile.defaultValidityDays || 14;
+    today.setDate(today.getDate() + days);
+    return today.toISOString().slice(0, 10);
+  });
+
+  const [jobTitle, setJobTitle] = useState<string>(() => initialQuotation?.jobTitle || '');
 
   // Customer
-  const [customerName, setCustomerName] = useState<string>('');
-  const [customerPhone, setCustomerPhone] = useState<string>('');
-  const [customerEmail, setCustomerEmail] = useState<string>('');
-  const [customerAddress, setCustomerAddress] = useState<string>('');
+  const [customerName, setCustomerName] = useState<string>(() => initialQuotation?.customer.name || '');
+  const [customerPhone, setCustomerPhone] = useState<string>(() => initialQuotation?.customer.phone || '');
+  const [customerEmail, setCustomerEmail] = useState<string>(() => initialQuotation?.customer.email || '');
+  const [customerAddress, setCustomerAddress] = useState<string>(() => initialQuotation?.customer.address || '');
 
   // AI & Job Description
-  const [rawNotes, setRawNotes] = useState<string>('');
+  const [rawNotes, setRawNotes] = useState<string>(() => initialQuotation?.rawNotes || '');
   const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [includePriceList, setIncludePriceList] = useState<boolean>(true);
 
   // Items
-  const [items, setItems] = useState<QuotationItem[]>([]);
+  const [items, setItems] = useState<QuotationItem[]>(() => initialQuotation?.items || []);
   const [showPriceListDrawer, setShowPriceListDrawer] = useState<boolean>(false);
 
   // Financials
-  const [currency, setCurrency] = useState<string>(businessProfile.defaultCurrency || 'LKR');
-  const [discount, setDiscount] = useState<number>(0);
-  const [discountType, setDiscountType] = useState<DiscountType>('fixed');
-  const [additionalCharges, setAdditionalCharges] = useState<number>(0);
-  const [additionalChargesDescription, setAdditionalChargesDescription] = useState<string>('');
-  const [taxEnabled, setTaxEnabled] = useState<boolean>(false);
-  const [taxRate, setTaxRate] = useState<number>(0);
+  const [currency, setCurrency] = useState<string>(
+    () => initialQuotation?.currency || businessProfile.defaultCurrency || 'LKR'
+  );
+  const [discount, setDiscount] = useState<number>(() => initialQuotation?.discount || 0);
+  const [discountType, setDiscountType] = useState<DiscountType>(
+    () => initialQuotation?.discountType || 'fixed'
+  );
+  const [additionalCharges, setAdditionalCharges] = useState<number>(
+    () => initialQuotation?.additionalCharges || 0
+  );
+  const [additionalChargesDescription, setAdditionalChargesDescription] = useState<string>(
+    () => initialQuotation?.additionalChargesDescription || ''
+  );
+  const [taxEnabled, setTaxEnabled] = useState<boolean>(() => initialQuotation?.taxEnabled || false);
+  const [taxRate, setTaxRate] = useState<number>(() => initialQuotation?.taxRate || 0);
 
   // Notes & terms
-  const [notes, setNotes] = useState<string>('');
-  const [terms, setTerms] = useState<string>(businessProfile.defaultTerms || '');
+  const [notes, setNotes] = useState<string>(() => initialQuotation?.notes || '');
+  const [terms, setTerms] = useState<string>(
+    () => initialQuotation?.terms || businessProfile.defaultTerms || ''
+  );
 
   // Preview Modal
   const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
-  // Initialize
+  // Numbering sequence generation when creating new quote
   useEffect(() => {
-    if (initialQuotation) {
-      setQuotationId(initialQuotation.id);
-      setQuotationNumber(initialQuotation.quotationNumber);
-      setStatus(initialQuotation.status);
-      setIssueDate(initialQuotation.issueDate);
-      setValidUntilDate(initialQuotation.validUntilDate);
-      setJobTitle(initialQuotation.jobTitle);
-      setCustomerName(initialQuotation.customer.name);
-      setCustomerPhone(initialQuotation.customer.phone);
-      setCustomerEmail(initialQuotation.customer.email);
-      setCustomerAddress(initialQuotation.customer.address);
-      setRawNotes(initialQuotation.rawNotes || '');
-      setItems(initialQuotation.items);
-      setCurrency(initialQuotation.currency || businessProfile.defaultCurrency || 'LKR');
-      setDiscount(initialQuotation.discount || 0);
-      setDiscountType(initialQuotation.discountType || 'fixed');
-      setAdditionalCharges(initialQuotation.additionalCharges || 0);
-      setAdditionalChargesDescription(initialQuotation.additionalChargesDescription || '');
-      setTaxEnabled(initialQuotation.taxEnabled || false);
-      setTaxRate(initialQuotation.taxRate || 0);
-      setNotes(initialQuotation.notes || '');
-      setTerms(initialQuotation.terms || businessProfile.defaultTerms);
-    } else {
-      // New quotation
-      const newId = crypto.randomUUID ? crypto.randomUUID() : `q_${Date.now()}`;
-      setQuotationId(newId);
-
-      const today = new Date();
-      const todayStr = today.toISOString().slice(0, 10);
-      setIssueDate(todayStr);
-
-      const validityDays = businessProfile.defaultValidityDays || 14;
-      const validUntil = new Date(today);
-      validUntil.setDate(today.getDate() + validityDays);
-      setValidUntilDate(validUntil.toISOString().slice(0, 10));
-
-      setCurrency(businessProfile.defaultCurrency || 'LKR');
-      setTerms(businessProfile.defaultTerms || '');
-
+    if (!initialQuotation) {
       getNextQuotationNumber()
         .then((num) => setQuotationNumber(num))
-        .catch(() => setQuotationNumber(`KQ-${today.getFullYear()}-0001`));
+        .catch(() => setQuotationNumber(`KQ-${new Date().getFullYear()}-0001`));
     }
-  }, [initialQuotation, businessProfile]);
+  }, [initialQuotation]);
 
   // Real-time deterministic financial calculation
   const calculatedTotals = calculateQuotationTotals({
@@ -263,7 +259,7 @@ export function QuotationWizard({
       }
 
       // Convert parsed items to QuotationItem
-      const newItems: QuotationItem[] = parsed.items.map((item: any) => {
+      const newItems: QuotationItem[] = parsed.items.map((item: AIParsedItem) => {
         const qty = item.quantity || 1;
         const price = item.unitPrice !== null ? item.unitPrice : 0;
         return {
@@ -289,10 +285,11 @@ export function QuotationWizard({
         `Generated ${newItems.length} item(s) using Gemma 3 1B. Please review below.`
       );
       setCurrentStep(3); // Advance to items review
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('AI generation error:', err);
-      setAiError(err.message || 'Could not connect to Ollama. Check that Ollama is running.');
-      error('AI Inference Error', err.message);
+      const errMsg = err instanceof Error ? err.message : 'Could not connect to Ollama. Check that Ollama is running.';
+      setAiError(errMsg);
+      error('AI Inference Error', errMsg);
     } finally {
       setIsAiLoading(false);
     }
@@ -353,8 +350,9 @@ export function QuotationWizard({
         `Quotation ${quoteObj.quotationNumber} saved to local storage.`
       );
       onSaved(quoteObj);
-    } catch (err: any) {
-      error('Save Failed', err.message || 'Failed to save quotation locally');
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Failed to save quotation locally';
+      error('Save Failed', errMsg);
     } finally {
       setIsSaving(false);
     }

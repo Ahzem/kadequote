@@ -7,11 +7,9 @@ import {
   FileText,
   Building2,
   Settings,
-  Sparkles,
   Menu,
   X,
   Cpu,
-  Layers,
   ShieldCheck,
 } from 'lucide-react';
 import { Quotation } from '@/types/quotation';
@@ -65,13 +63,13 @@ function MainApp() {
           error: `HTTP ${res.status}: Failed to reach local status endpoint`,
         });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setOllamaStatus({
         connected: false,
         model: 'gemma3:1b',
         modelInstalled: false,
         availableModels: [],
-        error: err.message || 'Network error querying Ollama status',
+        error: err instanceof Error ? err.message : 'Network error querying Ollama status',
       });
     } finally {
       setIsCheckingOllama(false);
@@ -80,7 +78,6 @@ function MainApp() {
 
   // Load IndexedDB data
   const loadDatabaseData = useCallback(async () => {
-    setIsLoadingData(true);
     try {
       const [quotes, profile] = await Promise.all([
         getAllQuotations(),
@@ -88,7 +85,7 @@ function MainApp() {
       ]);
       setQuotations(quotes);
       setBusinessProfile(profile);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load local data:', err);
       error('Storage Error', 'Could not open IndexedDB in this browser.');
     } finally {
@@ -97,9 +94,45 @@ function MainApp() {
   }, [error]);
 
   useEffect(() => {
-    loadDatabaseData();
-    checkOllamaHealth();
-  }, [loadDatabaseData, checkOllamaHealth]);
+    let ignore = false;
+
+    Promise.all([getAllQuotations(), getBusinessProfile()])
+      .then(([quotes, profile]) => {
+        if (!ignore) {
+          setQuotations(quotes);
+          setBusinessProfile(profile);
+          setIsLoadingData(false);
+        }
+      })
+      .catch((err) => {
+        if (!ignore) {
+          console.error('Failed to load local data:', err);
+          error('Storage Error', 'Could not open IndexedDB in this browser.');
+          setIsLoadingData(false);
+        }
+      });
+
+    fetch('/api/ai/status')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: OllamaStatusResponse | null) => {
+        if (!ignore && data) setOllamaStatus(data);
+      })
+      .catch((err: unknown) => {
+        if (!ignore) {
+          setOllamaStatus({
+            connected: false,
+            model: 'gemma3:1b',
+            modelInstalled: false,
+            availableModels: [],
+            error: err instanceof Error ? err.message : 'Network error querying Ollama status',
+          });
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [error]);
 
   // Actions
   const handleCreateNew = () => {
@@ -150,7 +183,7 @@ function MainApp() {
   interface NavItem {
     id: ActiveTab;
     label: string;
-    icon: any;
+    icon: React.ComponentType<{ className?: string }>;
     badge?: number;
   }
 

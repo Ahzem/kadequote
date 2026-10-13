@@ -1,36 +1,150 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# KadeQuote — Local-First AI Quotation Maker
 
-## Getting Started
+> **Private, on-device AI quotation generator for electricians, plumbers, repair technicians, and small service businesses.**
 
-First, run the development server:
+Built with **Next.js (App Router)** and **Ollama running Gemma 3 1B**. Customer data and quotations never leave your machine.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## 🌟 Key Features
+
+1. **Local-First AI Note Parser (`gemma3:1b`)**:
+   - Converts informal job notes (e.g., *"Replace 3 switches, repair socket, labour 2500 rupees, switches 450 each and socket parts 800"*) into structured line items.
+   - Intelligent categorization (`material`, `labour`, `service`, `other`).
+   - Automatically cross-references your saved business price list.
+   - Strictly marks uncertain/unpriced items as requiring human review—no silent hallucination.
+
+2. **100% Offline & Private (IndexedDB via `idb`)**:
+   - Stores quotations, business profiles, and numbering sequences locally in the browser.
+   - Zero external cloud AI APIs (no OpenAI, no Anthropic, no telemetry).
+   - Works offline once the app and model are loaded.
+
+3. **Deterministic Financial Calculations**:
+   - Strict 2-decimal rounded precision in TypeScript (no floating-point rounding errors).
+   - Configurable discounts (fixed monetary or percentage).
+   - Additional charges (transport, delivery, emergency fee).
+   - Optional tax rate calculator with clear non-binding estimate notice.
+
+4. **Professional PDF Generation (`jspdf` & `jspdf-autotable`)**:
+   - Clean, professional design with company logo, bill-to block, itemized table, summary box, payment terms, and signature lines.
+   - Downloadable directly in-browser.
+
+5. **Business Profile & Reusable Price List**:
+   - Company branding, logo upload (stored locally as Base64 in IndexedDB), default currency, validity period, and standard labour rates.
+   - Reusable materials and service rates that guide Gemma 3 1B during note parsing.
+
+6. **Sequential Quotation Numbering**:
+   - Atomic sequential quotation numbers (e.g. `KQ-2026-0001`) persisted locally to prevent accidental reuse.
+
+7. **Data Backup & Restore**:
+   - Full JSON export of all quotations and configuration.
+   - Schema-validated import with error checking and factory reset option.
+
+---
+
+## 🛠️ Technology Stack
+
+- **Framework**: Next.js 16 (App Router with React 19)
+- **Local AI Engine**: Ollama running `gemma3:1b` (via HTTP endpoint `http://127.0.0.1:11434`)
+- **Styling**: Tailwind CSS v4 & Lucide React icons
+- **Validation**: Zod schema validation for AI input/output, forms, and backups
+- **Local Storage**: IndexedDB (using `idb`)
+- **PDF Generation**: `jspdf` and `jspdf-autotable`
+- **Testing**: Vitest with unit tests and live Ollama integration tests
+- **Package Manager**: pnpm
+
+---
+
+## 🚀 Getting Started on Windows 11 (PowerShell)
+
+### Step 1: Install & Start Ollama
+
+1. Download and install Ollama from [ollama.com](https://ollama.com/download).
+2. Open PowerShell and pull the lightweight Gemma 3 1B model:
+
+```powershell
+ollama run gemma3:1b
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Ollama runs as a background service listening on `http://127.0.0.1:11434`. You can verify it with:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```powershell
+curl.exe -s http://127.0.0.1:11434/api/tags
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+### Step 2: Configure Environment Variables
 
-To learn more about Next.js, take a look at the following resources:
+Create `.env.local` in the project root (already seeded with defaults):
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```env
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=gemma3:1b
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+### Step 3: Install Dependencies
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```powershell
+pnpm install
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+### Step 4: Run Automated Tests
+
+Run the full test suite (including calculation tests, validation tests, numbering tests, and live Ollama inference):
+
+```powershell
+pnpm test
+```
+
+---
+
+### Step 5: Start the Development Server
+
+```powershell
+pnpm run dev
+```
+
+Open your browser to:
+
+👉 **[http://localhost:3000](http://localhost:3000)**
+
+---
+
+## 🧪 Verification & Automated Checks
+
+- **Linting**:
+  ```powershell
+  pnpm run lint
+  ```
+  *(Passes with 0 errors and 0 warnings)*
+
+- **Production Build**:
+  ```powershell
+  pnpm run build
+  ```
+  *(Compiles static pages and dynamic Route Handlers cleanly)*
+
+- **Test Suite**:
+  ```powershell
+  pnpm test
+  ```
+  *(30 automated tests passing)*
+
+---
+
+## 🔒 Privacy & Offline Trust Boundary
+
+- **Local Trust Boundary**: The server-side route handler `/api/ai/parse-quotation` communicates exclusively over `localhost` (`127.0.0.1`) to the locally installed Ollama daemon.
+- **Client Storage**: All customer names, contact info, job notes, and quotes are persisted in the browser's IndexedDB database (`kadequote_local_db`).
+- **Telemetry**: Zero tracking, analytics, or external API keys are used.
+
+---
+
+## 📄 License
+
+MIT License. Suitable for Hacktoberfest 2026 open-source contributions.

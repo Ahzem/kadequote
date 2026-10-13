@@ -3,7 +3,6 @@
 import React, { useState, useMemo } from 'react';
 import {
   Search,
-  Filter,
   Plus,
   Eye,
   Edit3,
@@ -92,8 +91,8 @@ export function QuotationsList({
       await onDelete(deleteTargetId);
       success('Quotation Deleted', 'The quotation was removed from local storage.');
       setDeleteTargetId(null);
-    } catch (err: any) {
-      error('Delete Failed', err.message || 'Could not delete quotation.');
+    } catch (err: unknown) {
+      error('Delete Failed', err instanceof Error ? err.message : 'Could not delete quotation.');
     } finally {
       setIsDeleting(false);
     }
@@ -103,8 +102,8 @@ export function QuotationsList({
     try {
       await onDuplicate(id);
       success('Quotation Duplicated', 'New sequential draft created.');
-    } catch (err: any) {
-      error('Duplication Failed', err.message);
+    } catch (err: unknown) {
+      error('Duplication Failed', err instanceof Error ? err.message : 'Duplication failed.');
     }
   };
 
@@ -165,7 +164,7 @@ export function QuotationsList({
             <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest' | 'highest')}
               className="w-full pl-8 pr-4 py-2.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-700"
             >
               <option value="newest">Newest First</option>

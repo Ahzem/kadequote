@@ -207,7 +207,7 @@ export function generateQuotationPDF(quotation: Quotation, business: BusinessPro
     },
   });
 
-  const finalY = (doc as any).lastAutoTable?.finalY || cursorY + 40;
+  const finalY = (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY || cursorY + 40;
   cursorY = finalY + 6;
 
   // Check if we have enough room for summary and signatures (requires at least 70mm)

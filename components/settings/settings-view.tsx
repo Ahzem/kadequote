@@ -32,7 +32,7 @@ export function SettingsView({
   isCheckingOllama,
   onDataReset,
 }: SettingsViewProps) {
-  const { success, error, info } = useToast();
+  const { success, error } = useToast();
 
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -55,8 +55,8 @@ export function SettingsView({
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       success('Export Completed', 'Downloaded complete backup of all local quotations and settings.');
-    } catch (err: any) {
-      error('Export Failed', err.message);
+    } catch (err: unknown) {
+      error('Export Failed', err instanceof Error ? err.message : 'Export failed.');
     } finally {
       setIsExporting(false);
     }
@@ -77,8 +77,8 @@ export function SettingsView({
       } else {
         error('Import Failed', result.message);
       }
-    } catch (err: any) {
-      error('Import Failed', err.message || 'Invalid JSON file structure');
+    } catch (err: unknown) {
+      error('Import Failed', err instanceof Error ? err.message : 'Invalid JSON file structure');
     } finally {
       setIsImporting(false);
       // Reset input
@@ -94,8 +94,8 @@ export function SettingsView({
       success('Data Reset', 'All local quotations and custom settings have been cleared.');
       setIsClearModalOpen(false);
       onDataReset();
-    } catch (err: any) {
-      error('Clear Failed', err.message);
+    } catch (err: unknown) {
+      error('Clear Failed', err instanceof Error ? err.message : 'Clear failed.');
     } finally {
       setIsClearing(false);
     }
