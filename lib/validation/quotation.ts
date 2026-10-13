@@ -114,7 +114,7 @@ export const AIRawOutputSchema = z.object({
 export const BackupDataSchema = z.object({
   version: z.string().default('1.0'),
   exportedAt: z.string(),
-  quotations: z.array(z.any()),
-  businessProfile: z.any().optional(),
-  numberingState: z.any().optional(),
+  quotations: z.array(z.record(z.string(), z.unknown())),
+  businessProfile: z.record(z.string(), z.unknown()).optional(),
+  numberingState: z.record(z.string(), z.unknown()).optional(),
 });

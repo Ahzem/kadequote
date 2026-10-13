@@ -46,7 +46,7 @@ export async function checkOllamaStatus(): Promise<OllamaStatusResponse> {
 
     const data = await res.json();
     const models: string[] = Array.isArray(data.models)
-      ? data.models.map((m: any) => m.name || m.model).filter(Boolean)
+      ? data.models.map((m: { name?: string; model?: string }) => m.name || m.model || '').filter(Boolean)
       : [];
 
     const isInstalled = models.some(
@@ -60,11 +60,14 @@ export async function checkOllamaStatus(): Promise<OllamaStatusResponse> {
       availableModels: models,
       latencyMs: Date.now() - startTime,
     };
-  } catch (err: any) {
-    let errorMessage = err?.message || 'Failed to connect to Ollama';
-    if (err.name === 'AbortError') {
+  } catch (err: unknown) {
+    const rawError = err instanceof Error ? err.message : String(err);
+    const errObj = err as { name?: string; cause?: { code?: string } };
+    let errorMessage = rawError || 'Failed to connect to Ollama';
+
+    if (errObj?.name === 'AbortError') {
       errorMessage = 'Connection to Ollama timed out (service may be stopped or overloaded)';
-    } else if (err.cause?.code === 'ECONNREFUSED' || errorMessage.includes('ECONNREFUSED')) {
+    } else if (errObj?.cause?.code === 'ECONNREFUSED' || rawError.includes('ECONNREFUSED')) {
       errorMessage = `Cannot connect to Ollama at ${baseUrl}. Ensure Ollama is installed and running.`;
     }
 
@@ -82,7 +85,7 @@ export async function checkOllamaStatus(): Promise<OllamaStatusResponse> {
 /**
  * Robust JSON parser that handles markdown code blocks or surrounding text
  */
-export function extractAndParseJSON(rawText: string): any {
+export function extractAndParseJSON(rawText: string): unknown {
   if (!rawText || typeof rawText !== 'string') {
     throw new Error('Empty AI response received');
   }
@@ -184,14 +187,16 @@ export async function parseQuotationWithOllama(
     if (!rawContent) {
       throw new Error('Ollama returned an empty response message');
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     clearTimeout(timeoutId);
-    if (err.name === 'AbortError') {
+    const errObj = err as { name?: string; message?: string; cause?: { code?: string } };
+    const errMsg = err instanceof Error ? err.message : String(err);
+    if (errObj?.name === 'AbortError') {
       throw new Error(
         `Ollama inference timed out after ${REQUEST_TIMEOUT_MS / 1000} seconds. Ensure your computer is not out of memory.`
       );
     }
-    if (err.cause?.code === 'ECONNREFUSED' || err.message?.includes('ECONNREFUSED')) {
+    if (errObj?.cause?.code === 'ECONNREFUSED' || errMsg.includes('ECONNREFUSED')) {
       throw new Error(
         `Could not reach Ollama at ${baseUrl}. Please ensure the Ollama desktop app or service is running.`
       );
